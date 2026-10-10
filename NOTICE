@@ -1,0 +1,53 @@
+FlightTrack uses data and software from the following third parties.
+
+Aircraft positions
+  adsb.fi open data API — https://adsb.fi
+    Personal, non-commercial use only. Attribution required. Limit: one request per second.
+  adsb.lol API (fallback) and daily traces (where a flight was last seen) — https://adsb.lol
+    Data under the Open Database License (ODbL).
+
+Used only with the user's own key or account (Settings, Feeds), under that account's terms
+  The OpenSky Network REST API — https://opensky-network.org
+    Free account (OAuth2 client credentials); credit limits per day. Cite OpenSky where its
+    data is used in published work.
+  FlightAware AeroAPI, Personal tier — https://www.flightaware.com/commercial/aeroapi/
+    Personal and academic use only; paid by the request beyond a monthly credit.
+  ADS-B Exchange Community API, through RapidAPI — https://www.adsbexchange.com
+    Non-commercial use; a monthly allowance of requests.
+
+Maps and weather
+  Esri World Imagery and World Boundaries and Places — https://www.esri.com
+    Sources: Esri, Maxar, Earthstar Geographics, and the GIS User Community.
+  NEXRAD radar composite, Iowa Environmental Mesonet, Iowa State University
+    — https://mesonet.agron.iastate.edu
+  RainViewer weather radar (outside the contiguous United States) — https://www.rainviewer.com
+  GeoColor satellite imagery, NASA Global Imagery Browse Services (GIBS)
+    — https://earthdata.nasa.gov/gibs
+  Esri World Street Map — https://www.esri.com
+  VFR sectional charts, Federal Aviation Administration, Aeronautical Information Services
+    (tile service; United States only; not for navigation) — https://adds-faa.opendata.arcgis.com
+  Class airspace boundaries, Federal Aviation Administration — https://adds-faa.opendata.arcgis.com
+
+Airport weather
+  METAR reports, Aviation Weather Center, US National Weather Service
+    — https://aviationweather.gov
+
+Aircraft details
+  adsbdb.com API: routes by callsign, airframe details by hex code — https://www.adsbdb.com
+  airport-data.com thumbnail API: aircraft photos, credited to their photographers on screen
+    — https://airport-data.com
+
+Ground elevation (the coverage map shown with diagnostics)
+  Open-Meteo Elevation API — https://open-meteo.com
+    Free for non-commercial use, CC BY 4.0. Data: Copernicus DEM GLO-90, produced using
+    Copernicus WorldDEM-90 (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH
+    2014-2018, provided under COPERNICUS by the European Union and ESA.
+
+Location
+  OurAirports airport and runway data (public domain), bundled — https://ourairports.com/data/
+  ipinfo.io IP geolocation, asked once at start-up for the Current Location favorite — https://ipinfo.io
+
+Software
+  pygame-ce (LGPL-2.1) — https://pyga.me
+  Requests (Apache-2.0) — https://requests.readthedocs.io
+  Flask (BSD-3-Clause) — https://flask.palletsprojects.com
