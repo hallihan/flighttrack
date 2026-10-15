@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlightTrack settings</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icon.svg') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icon-32.png') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-180.png') }}">
+<style>
+  {{ theme_css }}
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { background: var(--bar); padding: .9rem 1rem .2rem; }
+  h1 { color: var(--accent); font-size: 1.25rem; letter-spacing: .03em; margin: 0 0 .1rem;
+       display: flex; align-items: center; gap: .5rem; }
+  header p { color: var(--dim); margin: 0 0 .6rem; font-size: .9rem; }
+  [role=tablist] { display: flex; background: var(--bar); border-bottom: 1px solid var(--edge);
+                   overflow-x: auto; position: sticky; top: 0; z-index: 2; }
+  [role=tab] { flex: 1 0 auto; min-height: 48px; padding: 0 1rem; font: inherit; font-weight: 600;
+               color: var(--dim); background: none; border: 0; border-bottom: 4px solid transparent;
+               cursor: pointer; }
+  [role=tab][aria-selected=true] { color: var(--text); background: var(--panel);
+                                   border-bottom-color: var(--accent); }
+  main { max-width: 44rem; margin: 0 auto; padding: 1rem 1rem 3rem; }
+  section[hidden] { display: none; }
+  h2 { color: var(--accent); font-size: .85rem; letter-spacing: .08em; text-transform: uppercase;
+       border-bottom: 1px solid var(--edge); padding-bottom: .3rem; margin: 1.6rem 0 .7rem; }
+  h2:first-child { margin-top: .3rem; }
+  .row { display: flex; align-items: center; gap: .8rem; min-height: 56px; }
+  .row > .label { flex: 1; font-weight: 600; }
+  .slider { padding: .5rem 0 .9rem; }
+  .slider .top { display: flex; justify-content: space-between; font-weight: 600; }
+  .slider .top span:last-child { color: var(--dim); }
+  input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; margin: .2rem 0 0; }
+  .segments { display: flex; border: 1px solid var(--edge); border-radius: 8px; overflow: hidden; }
+  .segments button { font: inherit; font-weight: 600; color: var(--dim); background: var(--button);
+                     border: 0; border-left: 1px solid var(--edge); padding: 0 .9rem;
+                     min-height: 44px; cursor: pointer; }
+  .segments button:first-child { border-left: 0; }
+  .segments button[aria-checked=true] { color: var(--on-text); background: var(--on); }
+  .switch { position: relative; width: 60px; height: 32px; flex: none; }
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0;
+                  cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 16px; background: var(--off);
+                 border: 1px solid var(--edge); pointer-events: none; }
+  .switch span::after { content: ""; position: absolute; top: 3px; left: 4px; width: 24px;
+                        height: 24px; border-radius: 50%; background: var(--text);
+                        transition: left .12s; }
+  .switch input:checked + span { background: var(--on); }
+  .switch input:checked + span::after { left: 30px; }
+  .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button:disabled { color: var(--dim); cursor: default; }
+  .add { display: flex; gap: .5rem; margin-top: .8rem; }
+  .picker { position: relative; flex: 1; }
+  input[type=text], input[type=url] { width: 100%; padding: .7rem; font: inherit; color: inherit;
+         background: var(--bg); border: 1px solid var(--edge); border-radius: 8px; }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .go { font: inherit; font-weight: 600; color: var(--on-text); background: var(--accent); border: 0;
+        border-radius: 8px; padding: 0 1.2rem; min-height: 48px; cursor: pointer; }
+  .plain { font: inherit; font-weight: 600; color: var(--text); background: var(--button);
+           border: 1px solid var(--edge); border-radius: 8px; padding: 0 1.2rem; min-height: 48px;
+           cursor: pointer; }
+  .plain.asking { background: var(--warn); }
+  .suggestions { list-style: none; margin: .25rem 0 0; padding: 0; border: 1px solid var(--edge);
+                 border-radius: 8px; overflow: hidden; background: var(--bg); position: absolute;
+                 left: 0; right: 0; z-index: 3; box-shadow: 0 8px 20px #0008; }
+  .suggestions[hidden] { display: none; }
+  .suggestions li { padding: .55rem .7rem; cursor: pointer; border-top: 1px solid var(--edge); }
+  .suggestions li:first-child { border-top: 0; }
+  .suggestions li[aria-selected=true], .suggestions li:hover { background: var(--pressed); }
+  .suggestions b { color: var(--accent); margin-right: .5rem; }
+  .suggestions span { color: var(--dim); font-size: .9rem; }
+  /* Lists of favorites, as on the display: a row each, icon buttons in fixed slots at the
+     right (so the same button lines up from row to row), a + on the list's heading. */
+  h2.list-head { display: flex; align-items: center; justify-content: space-between; }
+  .icon { flex: none; width: 50px; height: 42px; display: inline-flex; align-items: center;
+          justify-content: center; padding: 0; color: var(--text); background: var(--button);
+          border: 1px solid var(--edge); border-radius: 8px; cursor: pointer; }
+  .icon svg { width: 24px; height: 24px; }
+  .icon.on { color: var(--accent); border-color: var(--accent); }
+  .icon.danger { color: var(--bad); border-color: var(--bad); }
+  .icon:disabled { color: var(--edge); cursor: default; }
+  .icon.on:disabled { color: var(--accent); }
+  .slot { flex: none; width: 60px; display: flex; justify-content: center; }
+  .entry { display: flex; align-items: center; margin: .4rem 0; }
+  .entry .face { flex: 1; min-width: 0; display: flex; align-items: center; gap: .6rem;
+                 min-height: 48px; padding: 0 .8rem; background: var(--panel);
+                 border: 1px solid var(--edge); border-radius: 8px; }
+  .entry .face b { white-space: nowrap; }
+  .entry .face .name { flex: 1; min-width: 0; color: var(--dim); overflow: hidden;
+                       text-overflow: ellipsis; white-space: nowrap; }
+  .entry .face .note { color: var(--dim); font-size: .9rem; white-space: nowrap; }
+  .entry.off .face b { color: var(--dim); }
+  .entry.asking .face { background: var(--warn); font-weight: 600; cursor: pointer; }
+  .badge { font-size: .8rem; font-weight: 700; padding: .1rem .45rem; border-radius: 5px; }
+  .badge.VFR { background: rgb(60, 200, 90); } .badge.MVFR { background: rgb(70, 130, 255); }
+  .badge.IFR { background: rgb(235, 60, 50); } .badge.LIFR { background: rgb(225, 80, 225); }
+  .hint { color: var(--dim); font-size: .9rem; margin: .5rem 0 0; }
+  header { position: relative; }
+  #signout { position: absolute; top: .7rem; right: 1rem; min-height: 36px; padding: 0 .9rem; }
+  .key .keyval { color: var(--dim); font-family: ui-monospace, monospace; }
+  label.show { color: var(--dim); display: flex; gap: .3rem; align-items: center; flex: none; }
+  .add input[type=password] { width: 100%; padding: .7rem; font: inherit; color: inherit;
+         background: var(--bg); border: 1px solid var(--edge); border-radius: 8px; flex: 1; }
+  .good { color: #50dc6e; font-size: .95rem; margin: .5rem 0 0; }
+  .error { color: var(--bad); font-size: .95rem; margin: .5rem 0 0; min-height: 1.4em; }
+  .swatch { display: inline-block; width: .8rem; height: .8rem; border-radius: 50%;
+            background: var(--fav); vertical-align: -1px; }
+  dl { margin: 0; }
+  dt { font-weight: 600; margin-top: .7rem; }
+  dd { margin: 0 0 0 1rem; color: var(--dim); }
+  /* The Preview tab is nine tenths of the window's width, wherever the column of settings
+     ends: the picture, and the words under it. The picture is held to what fits the
+     window's height, so it is never cut off at the bottom. */
+  #panel-preview { width: 90vw; margin-left: calc(50% - 45vw); }
+  #preview { display: block; height: auto; background: #000; max-width: none;
+             width: max(min(100%, calc((100vh - 12rem) * 800 / 480)), 280px); margin: 0 auto;
+             border: 1px solid var(--edge); border-radius: 8px; }
+  footer { color: var(--dim); font-size: .85rem; margin-top: 2rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1><img src="{{ url_for('static', filename='icon.svg') }}" alt="" width="30" height="30">FlightTrack</h1>
+  <p id="centered"></p>
+  <button class="plain" id="signout" type="button">Sign out</button>
+</header>
+<div role="tablist" aria-label="Settings">
+  {% set tabs = ["Display", "Map", "Airports", "Aircraft", "Feeds", "System", "Storage", "About"] %}
+  {% if can_preview %}{% set tabs = tabs + ["Preview"] %}{% endif %}
+  {% for name in tabs %}
+  <button role="tab" id="tab-{{ name|lower }}" aria-controls="panel-{{ name|lower }}"
+          aria-selected="{{ 'true' if loop.first else 'false' }}"
+          tabindex="{{ 0 if loop.first else -1 }}">{{ name }}</button>
+  {% endfor %}
+</div>
+<main>
+  <noscript><p class="error">This page needs JavaScript. Everything here can also be changed
+    on the display itself: tap the cog.</p></noscript>
+
+  <section role="tabpanel" id="panel-display" aria-labelledby="tab-display">
+    <div data-choice="theme">Theme</div>
+    <div data-slider="brightness">Screen brightness</div>
+    <div data-slider="map_brightness">Map brightness</div>
+    <div data-slider="ring_opacity">Range ring opacity</div>
+    <div data-slider="feature_opacity">Map features opacity</div>
+    <div data-switch="day_night">Day and night shading</div>
+  </section>
+
+  <section role="tabpanel" id="panel-map" aria-labelledby="tab-map" hidden>
+    <div data-switch="show_map">Map</div>
+    <div data-choice="map_style">Kind of map</div>
+    <div data-switch="show_radar">Rain radar</div>
+    <div data-switch="show_clouds">Cloud cover</div>
+    <div data-slider="weather_opacity">Weather opacity</div>
+    <div data-switch="show_airspace">Airspace boundaries</div>
+    <div data-switch="show_runways">Runways at close range</div>
+  </section>
+
+  <section role="tabpanel" id="panel-airports" aria-labelledby="tab-airports" hidden>
+    <h2 class="list-head">Favorite airports
+      <button class="icon" id="airport-plus" type="button" aria-label="Add an airport"
+              aria-expanded="false" aria-controls="airport-adder"></button></h2>
+    <div class="add" id="airport-adder" hidden>
+      <div class="picker">
+        <input type="text" id="airport" maxlength="40" autocomplete="off" spellcheck="false"
+               placeholder="Add an airport: code, name or city" aria-label="Add an airport"
+               role="combobox" aria-autocomplete="list" aria-expanded="false"
+               aria-controls="airport-list" data-search="{{ url_for('suggest_airports') }}">
+        <ul class="suggestions" id="airport-list" role="listbox" hidden></ul>
+      </div>
+      <button class="go" id="airport-add" type="button">Add</button>
+    </div>
+    <p class="error" id="airport-error" role="alert"></p>
+    <div id="airports"></div>
+    <p class="hint">The filled house is home: the display centers on it. Click another house
+      to move it there. The badge is the airport's flight category, from its latest METAR.</p>
+  </section>
+
+  <section role="tabpanel" id="panel-aircraft" aria-labelledby="tab-aircraft" hidden>
+    <h2 class="list-head">Favorite aircraft
+      <button class="icon" id="plane-plus" type="button" aria-label="Add an aircraft"
+              aria-expanded="false" aria-controls="plane-adder"></button></h2>
+    <div class="add" id="plane-adder" hidden>
+      <div class="picker">
+        <input type="text" id="plane" maxlength="12" autocomplete="off" spellcheck="false"
+               placeholder="Add: registration, callsign or hex" aria-label="Add an aircraft"
+               role="combobox" aria-autocomplete="list" aria-expanded="false"
+               aria-controls="plane-list" data-search="{{ url_for('suggest_aircraft') }}">
+        <ul class="suggestions" id="plane-list" role="listbox" hidden></ul>
+      </div>
+      <button class="go" id="plane-add" type="button">Add</button>
+    </div>
+    <p class="error" id="plane-error" role="alert"></p>
+    <div id="aircraft"></div>
+    <p class="hint">Favorites are drawn in magenta <span class="swatch" aria-hidden="true"></span>
+      and always labeled. Pinned: its track stays on the map when it is not selected. Beside
+      each, where it was last seen. Suggestions are aircraft on the map or seen lately;
+      anything else can be typed in full.</p>
+
+  </section>
+
+  <section role="tabpanel" id="panel-feeds" aria-labelledby="tab-feeds" hidden>
+    <h2>Your receiver</h2>
+    <div class="add">
+      <input type="url" id="receiver" maxlength="300" autocomplete="off" spellcheck="false"
+             placeholder="http://receiver.local/tar1090/data/aircraft.json"
+             aria-label="Address of your receiver's aircraft.json">
+      <button class="go" id="receiver-save" type="button">Save</button>
+    </div>
+    <p class="error" id="receiver-error" role="alert"></p>
+    <div id="receiver-status" aria-live="polite"></div>
+    <p class="hint">Address of the aircraft.json served by your own receiver, if you have one.
+      It is combined with the public feed. Leave empty for none.</p>
+
+    {% for group, fields, about in key_groups %}
+    <h2>{{ group }}</h2>
+    {% for name, label in fields %}
+    <div class="key" data-key="{{ name }}">
+      <div class="row"><span class="label">{{ label }}</span><span class="keyval"></span></div>
+      <div class="add">
+        <input type="password" autocomplete="off" spellcheck="false" maxlength="200"
+               placeholder="Paste a new one here" aria-label="{{ label }}">
+        <label class="show"><input type="checkbox"> Show</label>
+        <div class="slot"><button class="icon" type="button" data-save
+             aria-label="Save the {{ label }}"></button></div>
+        <div class="slot"><button class="icon" type="button" data-remove
+             aria-label="Remove the {{ label }}"></button></div>
+      </div>
+      <p class="error" role="alert"></p>
+    </div>
+    {% endfor %}
+    <div class="svc" data-group="{{ group }}" aria-live="polite"></div>
+    <p class="hint">{{ about }}</p>
+    {% endfor %}
+    <p class="hint">Keys are kept on the display, and shown here only as dots and their last
+      four characters.</p>
+
+    <h2>Requests today</h2>
+    <div id="usage"></div>
+  </section>
+
+  <section role="tabpanel" id="panel-system" aria-labelledby="tab-system" hidden>
+    <h2>Start again</h2>
+    {% if can_reset %}
+    <button class="plain" id="reset" type="button">Reset all settings</button>
+    <p class="hint" id="reset-note">Brightness, opacities, layers, filters and range go back to
+      their defaults. Home, favorite airports and aircraft, and your receiver are kept.</p>
+    {% endif %}
+    <h2>On the display only</h2>
+    <p class="hint">Wi-Fi and shutting down are on the display's own settings page (tap the
+      cog, then System). They are not offered here because this page has no password.</p>
+  </section>
+
+  <section role="tabpanel" id="panel-storage" aria-labelledby="tab-storage" hidden>
+    <div id="storage"><b>Measuring...</b></div>
+    {% if can_clear %}
+    <button class="plain" id="clear" type="button">Clear caches</button>
+    <p class="hint" id="clear-note">Maps and aircraft photos are used for 30 days and then fetched
+      afresh. Together the caches may take up to 32 GB, or half the free room on the card if
+      that is less. Clearing
+      removes downloaded maps, weather, airspace and aircraft details; they load again as
+      needed. Settings, favorites and your own pictures are not touched.</p>
+    {% endif %}
+  </section>
+
+  {% if can_preview %}
+  <section role="tabpanel" id="panel-preview" aria-labelledby="tab-preview" hidden>
+    <img id="preview" alt="What the display is showing now" width="800" height="480">
+    <p class="hint" id="preview-note">What the display is showing, renewed every second or so
+      while this tab is open. To look at only: clicking it does nothing. It is hidden while
+      someone is typing on the display's settings pages.</p>
+  </section>
+  {% endif %}
+
+  <section role="tabpanel" id="panel-about" aria-labelledby="tab-about" hidden>
+    <p><b>FlightTrack {{ version }}</b><br>{{ credits.NOT_FOR_NAVIGATION }}</p>
+    <h2>Where the data comes from</h2>
+    <dl>
+      {% for name, what, more in credits.SOURCES %}
+      <dt>{{ name }}: {{ what }}</dt>
+      <dd>{{ more }}</dd>
+      {% endfor %}
+    </dl>
+  </section>
+
+  <footer>
+    {{ credits.NOT_FOR_NAVIGATION }}<br>
+    {{ credits.BRIEF }}
+  </footer>
+</main>
+
+<script id="state" type="application/json">{{ state|tojson }}</script>
+<script>
+(function () {
+  "use strict";
+  var state = JSON.parse(document.getElementById("state").textContent);
+  function $(id) { return document.getElementById(id); }
+  // The display's theme: its colors, put in force whenever the state comes (it may have been
+  // changed on the display).
+  function applyColors() {
+    var colors = state.colors || {}, root = document.documentElement.style;
+    Object.keys(colors).forEach(function (name) {
+      if (name === "scheme") root.colorScheme = colors[name];
+      else root.setProperty("--" + name, colors[name]);
+    });
+  }
+  function el(tag, text, cls) {
+    var node = document.createElement(tag);
+    if (text != null) node.textContent = text;
+    if (cls) node.className = cls;
+    return node;
+  }
+
+  // ---- talking to the display ----------------------------------------------------------
+  function send(path, data, errorBox) {
+    return fetch(path, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(data)
+    }).then(function (reply) {
+      if (reply.status === 401) { location.reload(); throw new Error("signed out"); }
+      return reply.json();
+    }).then(function (now) {
+      state = now;
+      if (errorBox) errorBox.textContent = now.error || "";
+      render();
+      return !now.error;
+    }).catch(function () {
+      if (errorBox) errorBox.textContent = "Could not reach the display.";
+      return false;
+    });
+  }
+
+  // ---- tabs ---------------------------------------------------------------------------
+  var tabs = Array.prototype.slice.call(document.querySelectorAll("[role=tab]"));
+  function show(tab, focus) {
+    tabs.forEach(function (other) {
+      var on = other === tab;
+      other.setAttribute("aria-selected", on ? "true" : "false");
+      other.tabIndex = on ? 0 : -1;
+      $(other.getAttribute("aria-controls")).hidden = !on;
+    });
+    if (focus) tab.focus();
+    try { history.replaceState(null, "", "#" + tab.id.slice(4)); } catch (e) {}
+  }
+  tabs.forEach(function (tab, index) {
+    tab.addEventListener("click", function () { show(tab); });
+    tab.addEventListener("keydown", function (event) {
+      var step = {ArrowRight: 1, ArrowLeft: -1}[event.key];
+      if (step) show(tabs[(index + step + tabs.length) % tabs.length], true);
+    });
+  });
+  var wanted = $("tab-" + location.hash.slice(1));
+  if (wanted) show(wanted);
+
+  // ---- switches and sliders -----------------------------------------------------------
+  var switches = {}, sliders = {};
+  Array.prototype.forEach.call(document.querySelectorAll("[data-switch]"), function (row) {
+    var name = row.dataset.switch, label = row.textContent;
+    row.textContent = ""; row.className = "row";
+    var text = el("label", label, "label"); text.htmlFor = "s-" + name;
+    var box = el("span", null, "switch"), input = el("input");
+    input.type = "checkbox"; input.id = "s-" + name;
+    box.appendChild(input); box.appendChild(el("span"));
+    row.appendChild(text); row.appendChild(box);
+    input.addEventListener("change", function () {
+      send("/api/set", {name: name, value: input.checked});
+    });
+    switches[name] = input;
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-slider]"), function (row) {
+    var name = row.dataset.slider, label = row.textContent;
+    row.textContent = ""; row.className = "slider";
+    var top = el("div", null, "top"), text = el("label", label), shown = el("span");
+    text.htmlFor = "r-" + name;
+    var input = el("input"); input.type = "range"; input.id = "r-" + name;
+    input.max = 100; input.step = 1;
+    top.appendChild(text); top.appendChild(shown);
+    row.appendChild(top); row.appendChild(input);
+    var timer = null;
+    // Applied as it moves, as on the display, but not on every pixel of the way.
+    input.addEventListener("input", function () {
+      shown.textContent = input.value + "%";
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        send("/api/set", {name: name, value: input.value / 100});
+      }, 120);
+    });
+    sliders[name] = {input: input, shown: shown};
+  });
+
+  var choices = {};
+  Array.prototype.forEach.call(document.querySelectorAll("[data-choice]"), function (row) {
+    var name = row.dataset.choice, label = row.textContent;
+    row.textContent = ""; row.className = "row";
+    var text = el("span", label, "label"); text.id = "c-" + name;
+    var group = el("div", null, "segments");
+    group.setAttribute("role", "radiogroup"); group.setAttribute("aria-labelledby", text.id);
+    row.appendChild(text); row.appendChild(group);
+    choices[name] = group;
+  });
+
+  // ---- lists of favorites, as on the display --------------------------------------------
+  // The icons are drawn as on the display, from the same shapes (ui/widgets.py).
+  var PIN = "-6.5,-12 6.5,-12 6.5,-8.5 4,-8 3.5,-3.5 7,-2.5 7,0 -7,0 -7,-2.5 -3.5,-3.5 -4,-8 -6.5,-8.5";
+  function svg(name, on) {
+    var fill = on ? "currentColor" : "none", line = 'stroke="currentColor" stroke-width="2"';
+    var body = {
+      home: '<polygon points="12,1 24,12 20,12 20,23 4,23 4,12 0,12" fill="' + fill + '" ' + line + ' stroke-linejoin="round"/>',
+      pin: '<g transform="translate(12 12.5) rotate(25.8)"><line x1="0" y1="0" x2="0" y2="11" ' + line + '/><polygon points="' + PIN + '" fill="currentColor"/></g>',
+      trash: '<g transform="translate(12 12.5)" ' + line + ' fill="none"><line x1="-10" y1="-7" x2="10" y2="-7"/><polyline points="-3,-7 -3,-10 3,-10 3,-7"/><polygon points="-8,-4 8,-4 6,11 -6,11" fill="' + fill + '"/></g>',
+      save: '<g transform="translate(12 12)" ' + line + ' fill="none"><polygon points="-10,-10 6,-10 10,-6 10,10 -10,10"/><rect x="-5" y="-10" width="9" height="6"/><rect x="-6" y="2" width="12" height="8" fill="' + fill + '"/></g>',
+      plus: '<g stroke="currentColor" stroke-width="3"><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></g>'
+    }[name];
+    return '<svg viewBox="-1 -1 26 26" aria-hidden="true">' + body + "</svg>";
+  }
+  function iconButton(name, on, label, action, danger) {
+    var button = el("button", null, "icon" + (on ? " on" : "") + (danger ? " danger" : ""));
+    button.type = "button";
+    button.innerHTML = svg(name, on);  // our own markup: no text from anywhere else
+    button.setAttribute("aria-label", label);
+    if (name === "pin") button.setAttribute("aria-pressed", on ? "true" : "false");
+    if (action) button.addEventListener("click", action); else button.disabled = true;
+    return button;
+  }
+  var CATEGORIES = ["VFR", "MVFR", "IFR", "LIFR"];
+  var asking = null;  // the key of the row whose removal is being confirmed
+  // A row: what it is, a dim name, a note, a badge, then icon buttons; then a bin if remove is
+  // given, or an empty slot where a bin would be if remove is null. The bin asks first: the
+  // row turns into "Remove X? Tap here.", a click on it confirms, the bin again backs out.
+  function entry(key, title, name, note, badge, icons, question, remove, off) {
+    var row = el("div", null, "entry" + (off ? " off" : ""));
+    var face = el("div", null, "face");
+    var confirming = remove && asking === key;
+    if (confirming) {
+      row.className = "entry asking";
+      face.appendChild(el("span", question + " Tap here."));
+      face.setAttribute("role", "button"); face.tabIndex = 0;
+      face.addEventListener("click", function () { asking = null; remove(); });
+    } else {
+      face.appendChild(el("b", title));
+      face.appendChild(el("span", name || "", "name"));
+      if (note) face.appendChild(el("span", note, "note"));
+      if (CATEGORIES.indexOf(badge) >= 0) face.appendChild(el("span", badge, "badge " + badge));
+    }
+    row.appendChild(face);
+    icons.forEach(function (one) {
+      var slot = el("div", null, "slot");
+      slot.appendChild(iconButton(one.name, one.on, one.label, one.action));
+      row.appendChild(slot);
+    });
+    if (remove !== undefined) {
+      var slot = el("div", null, "slot");
+      if (remove) slot.appendChild(iconButton("trash", confirming,
+        (confirming ? "Keep " : "Remove ") + title,
+        function () { asking = confirming ? null : key; render(); }, confirming));
+      row.appendChild(slot);
+    }
+    return row;
+  }
+  function age(seconds) {
+    if (seconds < 100) return Math.round(seconds) + "s";
+    if (seconds < 6000) return Math.round(seconds / 60) + "m";
+    if (seconds < 172800) return Math.round(seconds / 3600) + "h";
+    return Math.round(seconds / 86400) + "d";
+  }
+  function plus(button, adder, box) {
+    button.innerHTML = svg("plus", false);
+    button.addEventListener("click", function () {
+      adder.hidden = !adder.hidden;
+      button.classList.toggle("on", !adder.hidden);
+      button.setAttribute("aria-expanded", adder.hidden ? "false" : "true");
+      if (!adder.hidden) box.focus();
+    });
+  }
+
+  function render() {
+    applyColors();
+    Object.keys(switches).forEach(function (name) {
+      switches[name].checked = state.switches[name];
+    });
+    Object.keys(choices).forEach(function (name) {
+      var group = choices[name], now = state.choices[name];
+      if (!group.children.length) {
+        Object.keys(now.options).forEach(function (value) {
+          var option = el("button", now.options[value]); option.type = "button";
+          option.setAttribute("role", "radio"); option.dataset.value = value;
+          option.addEventListener("click", function () {
+            send("/api/set", {name: name, value: value});
+          });
+          group.appendChild(option);
+        });
+      }
+      Array.prototype.forEach.call(group.children, function (option) {
+        option.setAttribute("aria-checked", option.dataset.value === now.value ? "true" : "false");
+      });
+    });
+    Object.keys(sliders).forEach(function (name) {
+      var slider = sliders[name], now = state.sliders[name];
+      slider.input.min = Math.round(now.min * 100);
+      if (document.activeElement !== slider.input) slider.input.value = Math.round(now.value * 100);
+      slider.shown.textContent = Math.round(now.value * 100) + "%";
+    });
+
+    var centered = state.centered, words = "Location not known yet, so the display is showing demo traffic.";
+    if (centered.source === "airport") words = "Centered on " + centered.label + ", your home airport.";
+    else if (centered.source === "coordinates") words = "Centered on " + centered.label + ", from the settings file.";
+    else if (centered.source === "ip") words = "Centered on your current location: " + centered.label + ".";
+    $("centered").textContent = words;
+
+    var list = $("airports"); list.textContent = "";
+    var here = state.here;
+    var label = "Current Location" + (here.known ? (here.place ? " (" + here.place + ")" : "") : " (not known yet)");
+    // Never removable: its bin's slot is left empty, so the houses line up.
+    list.appendChild(entry("here", label, "", "", "", [{
+      name: "home", on: here.home, label: "Make the current location home",
+      action: here.known && !here.home ? function () {
+        send("/api/airports", {action: "home", code: ""}, $("airport-error"));
+      } : null
+    }], "", null, !here.known));
+    state.airports.forEach(function (airport) {
+      var change = function (action) {
+        return function () {
+          send("/api/airports", {action: action, code: airport.ident}, $("airport-error"));
+        };
+      };
+      list.appendChild(entry("airport:" + airport.ident, airport.ident,
+        [airport.name, airport.place].filter(Boolean).join(" - "), "", airport.category,
+        [{name: "home", on: airport.home, label: "Make " + airport.ident + " home",
+          action: airport.home ? null : change("home")}],
+        "Remove " + airport.ident + "?" + (airport.home ? " It is home." : ""), change("remove")));
+    });
+
+    list = $("aircraft"); list.textContent = "";
+    state.aircraft.forEach(function (one) {
+      var pinned = state.pinned.indexOf(one) >= 0;
+      list.appendChild(entry("plane:" + one, one, "", (state.where || {})[one] || "", "",
+        [{name: "pin", on: pinned, label: (pinned ? "Unpin" : "Pin") + " the track of " + one,
+          action: function () { send("/api/pin", {entry: one, on: !pinned}, $("plane-error")); }}],
+        "Remove " + one + "?", function () {
+          send("/api/aircraft", {action: "remove", entry: one}, $("plane-error"));
+        }));
+    });
+    if (!state.aircraft.length) list.appendChild(el("p", "None yet. Click + to add one.", "hint"));
+
+    renderKeys();
+    if (document.activeElement !== $("receiver")) $("receiver").value = state.receiver;
+    // How the receiver last answered: the same words the display shows.
+    var answered = $("receiver-status"); answered.textContent = "";
+    (state.receiver_status || []).forEach(function (line, index) {
+      var row = el("p", line.text, line.bad ? "error" : (line.good ? "good" : "hint"));
+      if (index) row.style.marginTop = "0";
+      answered.appendChild(row);
+    });
+
+    var sizes = state.storage, size = function (bytes) {
+      var mb = bytes / 1e6;
+      if (mb >= 1000) return (mb / 1000).toFixed(1) + " GB";
+      return (mb >= 10 || mb === 0 ? Math.round(mb) : mb.toFixed(1)) + " MB";
+    };
+    var box = $("storage"); box.textContent = "";
+    if (!sizes) box.appendChild(el("b", "Measuring..."));
+    else {
+      box.appendChild(el("b", "SD card: " + size(sizes.free) + " free of " + size(sizes.total)));
+      box.appendChild(el("br"));
+      box.appendChild(el("b", "Caches: " + size(sizes.used) + " used, up to " +
+        size(sizes.budget) + " allowed"));
+      var list = el("ul");
+      sizes.items.forEach(function (item) { list.appendChild(el("li", item[0] + ": " + size(item[1]))); });
+      box.appendChild(list);
+    }
+  }
+
+  // ---- search as you type ---------------------------------------------------------------
+  function picker(box, list, describe, pick) {
+    var asked = 0, timer = null, at = -1;
+    function close() {
+      list.hidden = true; list.textContent = ""; at = -1;
+      box.setAttribute("aria-expanded", "false");
+    }
+    function mark(index) {
+      var items = list.children;
+      if (!items.length) return;
+      at = (index + items.length) % items.length;
+      for (var i = 0; i < items.length; i++)
+        items[i].setAttribute("aria-selected", i === at ? "true" : "false");
+    }
+    function showAll(found) {
+      list.textContent = "";
+      found.forEach(function (one) {
+        var parts = describe(one), row = el("li");
+        row.setAttribute("role", "option");
+        row.appendChild(el("b", parts[0])); row.appendChild(el("span", parts[1]));
+        row.addEventListener("mousedown", function (event) {
+          event.preventDefault(); close(); pick(one);
+        });
+        row.pick = function () { close(); pick(one); };
+        list.appendChild(row);
+      });
+      at = -1;
+      list.hidden = !found.length;
+      box.setAttribute("aria-expanded", found.length ? "true" : "false");
+    }
+    function ask() {
+      var text = box.value.trim(), mine = ++asked;
+      if (!text) { close(); return; }
+      fetch(box.dataset.search + "?q=" + encodeURIComponent(text))
+        .then(function (reply) { return reply.ok ? reply.json() : []; })
+        .then(function (found) { if (mine === asked) showAll(found); })
+        .catch(close);
+    }
+    box.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(ask, 150); });
+    box.addEventListener("blur", function () { setTimeout(close, 150); });
+    box.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        if (!list.hidden && at >= 0) list.children[at].pick();
+        else if (!list.hidden && list.children.length === 1) list.children[0].pick();
+        else pick(null);
+        return;
+      }
+      if (list.hidden) return;
+      if (event.key === "ArrowDown") { event.preventDefault(); mark(at + 1); }
+      else if (event.key === "ArrowUp") { event.preventDefault(); mark(at - 1); }
+      else if (event.key === "Escape") { close(); }
+    });
+  }
+
+  function addAirport(code) {
+    code = (code || $("airport").value).trim();
+    if (!code) return;
+    send("/api/airports", {action: "add", code: code}, $("airport-error")).then(function (ok) {
+      if (ok) $("airport").value = "";
+    });
+  }
+  picker($("airport"), $("airport-list"), function (a) {
+    return [a.ident + (a.iata ? " / " + a.iata : ""), a.name + (a.place ? " - " + a.place : "")];
+  }, function (a) { addAirport(a ? a.ident : null); });
+  $("airport-add").addEventListener("click", function () { addAirport(null); });
+
+  function addPlane(entry) {
+    entry = (entry || $("plane").value).trim();
+    if (!entry) return;
+    send("/api/aircraft", {action: "add", entry: entry}, $("plane-error")).then(function (ok) {
+      if (ok) $("plane").value = "";
+    });
+  }
+  picker($("plane"), $("plane-list"), function (p) {
+    var also = [p.callsign !== p.entry ? p.callsign : "", p.type].filter(Boolean).join("  ");
+    var when = p.seen < 60 ? "on the map now" : "seen " + age(p.seen) + " ago";
+    return [p.entry, also + (also ? "  " : "") + when];
+  }, function (p) { addPlane(p ? p.entry : null); });
+  plus($("airport-plus"), $("airport-adder"), $("airport"));
+  plus($("plane-plus"), $("plane-adder"), $("plane"));
+  $("plane-add").addEventListener("click", function () { addPlane(null); });
+
+  function saveReceiver() { send("/api/receiver", {url: $("receiver").value}, $("receiver-error")); }
+  $("receiver-save").addEventListener("click", saveReceiver);
+  $("receiver").addEventListener("keydown", function (event) {
+    if (event.key === "Enter") { event.preventDefault(); saveReceiver(); }
+  });
+
+  function twice(button, label, path, noteId, done) {
+    // A button that asks first: the second click, within five seconds, does it.
+    var armed = null;
+    button.addEventListener("click", function () {
+      if (armed === null) {
+        button.textContent = label + "? Click again to confirm";
+        button.className = "plain asking";
+        armed = setTimeout(function () {
+          armed = null; button.textContent = label; button.className = "plain";
+        }, 5000);
+        return;
+      }
+      clearTimeout(armed); armed = null;
+      button.textContent = label; button.className = "plain";
+      send(path, {confirm: true}).then(function (ok) {
+        if (ok) $(noteId).textContent = done;
+      });
+    });
+  }
+  if ($("clear")) twice($("clear"), "Clear caches", "/api/clear-caches", "clear-note",
+    "Caches cleared. Maps will load again as they are needed.");
+
+  var reset = $("reset");
+  if (reset) {
+    var armed = null;
+    reset.addEventListener("click", function () {
+      if (armed === null) {
+        reset.textContent = "Reset all settings? Click again to confirm";
+        reset.className = "plain asking";
+        armed = setTimeout(function () {
+          armed = null; reset.textContent = "Reset all settings"; reset.className = "plain";
+        }, 5000);
+        return;
+      }
+      clearTimeout(armed); armed = null;
+      reset.textContent = "Reset all settings"; reset.className = "plain";
+      send("/api/reset", {confirm: true}).then(function (ok) {
+        if (ok) $("reset-note").textContent = "Settings are back to their defaults.";
+      });
+    });
+  }
+
+  // ---- the picture of the screen: fetched only while its tab is showing ------------------
+  var shot = $("preview");
+  if (shot) {
+    var loading = false;
+    setInterval(function () {
+      if (loading || document.hidden || $("panel-preview").hidden) return;
+      loading = true;
+      var next = new Image();
+      next.onload = function () { shot.src = next.src; loading = false; };
+      next.onerror = function () { loading = false; };
+      next.src = "/preview.jpg?t=" + Date.now();
+    }, 1200);
+  }
+
+  // ---- keys for the services: entered as dots unless Show is ticked; never sent back ---------
+  // Two icon buttons in fixed places: the disk saves what is typed (grayed out until something
+  // is), the bin removes what is kept (grayed out when nothing is), asking first.
+  Array.prototype.forEach.call(document.querySelectorAll(".key"), function (row) {
+    var name = row.dataset.key, input = row.querySelector("input[type=password]");
+    var error = row.querySelector(".error");
+    var saveButton = row.querySelector("[data-save]"), bin = row.querySelector("[data-remove]");
+    var armed = null;
+    saveButton.innerHTML = svg("save", false);
+    bin.innerHTML = svg("trash", false);
+    row.querySelector(".show input").addEventListener("change", function (event) {
+      input.type = event.target.checked ? "text" : "password";
+    });
+    function sync() { saveButton.disabled = !input.value.trim(); }
+    input.addEventListener("input", sync);
+    input.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" && input.value.trim()) { event.preventDefault(); saveButton.click(); }
+    });
+    function save(value) {
+      return send("/api/key", {name: name, value: value}, error).then(function (ok) {
+        if (ok) input.value = "";
+        sync();
+      });
+    }
+    function disarm() {
+      armed = null; bin.classList.remove("danger"); bin.innerHTML = svg("trash", false);
+      error.textContent = "";
+    }
+    saveButton.addEventListener("click", function () { if (input.value.trim()) save(input.value); });
+    bin.addEventListener("click", function () {
+      if (armed && Date.now() - armed < 5000) { disarm(); save(""); return; }
+      armed = Date.now(); bin.classList.add("danger"); bin.innerHTML = svg("trash", true);
+      error.textContent = "Click the bin again to remove it.";
+      setTimeout(function () { if (armed) disarm(); }, 5000);
+    });
+    sync();
+  });
+  function renderKeys() {
+    Array.prototype.forEach.call(document.querySelectorAll(".key"), function (row) {
+      var shown = (state.keys || {})[row.dataset.key] || "";
+      row.querySelector(".keyval").textContent = shown || "Not set";
+      row.querySelector("[data-remove]").disabled = !shown;
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".svc"), function (box) {
+      box.textContent = "";
+      ((state.services || {})[box.dataset.group] || []).forEach(function (line) {
+        box.appendChild(el("p", line.text, line.bad ? "error" : (line.good ? "good" : "hint")));
+      });
+    });
+    var usage = $("usage"); usage.textContent = "";
+    (state.usage || []).forEach(function (line) { usage.appendChild(el("p", line, "hint")); });
+  }
+  $("signout").addEventListener("click", function () {
+    fetch("/signout", {method: "POST"}).then(function () { location.reload(); });
+  });
+
+  render();
+  // Things change on the display too: keep in step while this page is in view. Every five
+  // seconds; every two while the Feeds tab is showing, so its counts of requests run live.
+  var lastRead = Date.now();
+  setInterval(function () {
+    if (document.hidden || asking !== null) return;
+    var every = $("panel-feeds").hidden ? 5000 : 2000;
+    if (Date.now() - lastRead < every) return;
+    lastRead = Date.now();
+    fetch("/api/state").then(function (reply) {
+      if (reply.status === 401) { location.reload(); throw new Error("signed out"); }
+      return reply.json();
+    })
+      .then(function (now) { state = now; render(); }).catch(function () {});
+  }, 500);
+})();
+</script>
+</body>
+</html>

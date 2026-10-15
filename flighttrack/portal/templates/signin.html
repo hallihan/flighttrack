@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlightTrack</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icon.svg') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icon-32.png') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-180.png') }}">
+<style>
+  /* The same look as the settings page (settings.html): keep the two in step. */
+  {{ theme_css }}
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { background: var(--bar); padding: .9rem 1rem .6rem; border-bottom: 1px solid var(--edge); }
+  h1 { color: var(--accent); font-size: 1.25rem; letter-spacing: .03em; margin: 0;
+       display: flex; align-items: center; gap: .5rem; }
+  main { max-width: 44rem; margin: 0 auto; padding: 1rem 1rem 3rem; }
+  h2 { color: var(--accent); font-size: .85rem; letter-spacing: .08em; text-transform: uppercase;
+       border-bottom: 1px solid var(--edge); padding-bottom: .3rem; margin: 1.2rem 0 .7rem; }
+  form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+  input[type=password], input[type=text] { flex: 1; min-width: 12rem; padding: .7rem; font: inherit;
+         color: inherit; background: var(--bg); border: 1px solid var(--edge); border-radius: 8px; }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  label.show { color: var(--dim); display: flex; gap: .3rem; align-items: center; }
+  .go { font: inherit; font-weight: 600; color: var(--bg); background: var(--accent); border: 0;
+        border-radius: 8px; padding: 0 1.2rem; min-height: 48px; cursor: pointer; }
+  .hint { color: var(--dim); font-size: .9rem; margin: .5rem 0 0; }
+  .error { color: var(--bad); font-size: .95rem; margin: .5rem 0 0; min-height: 1.4em; }
+  #preview { display: block; height: auto; background: #000; width: 100%;
+             border: 1px solid var(--edge); border-radius: 8px; }
+  footer { color: var(--dim); font-size: .85rem; margin-top: 2rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1><img src="{{ url_for('static', filename='icon.svg') }}" alt="" width="30" height="30">FlightTrack</h1>
+</header>
+<main>
+  <h2>Settings</h2>
+  {% if password_set %}
+  <form id="signin">
+    <input type="password" id="password" autocomplete="current-password" maxlength="200"
+           placeholder="Password" aria-label="Password" required>
+    <label class="show"><input type="checkbox" id="show"> Show</label>
+    <button class="go" type="submit">Sign in</button>
+  </form>
+  <p class="error" id="error" role="alert"></p>
+  <p class="hint">The password is set on the display: Settings, System, Web page password.</p>
+  {% else %}
+  <p class="hint">To change settings here, first set a password on the display: Settings,
+    System, Web page password. Until then this page shows only the screen.</p>
+  {% endif %}
+
+  {% if can_preview %}
+  <h2>The screen now</h2>
+  <img id="preview" alt="What the display is showing now" width="800" height="480">
+  <p class="hint">Renewed about once a second. To look at only. It is hidden while someone is
+    typing a password or key on the display.</p>
+  {% endif %}
+  <footer>FlightTrack {{ version }}. Not for navigation.</footer>
+</main>
+<script>
+(function () {
+  "use strict";
+  function $(id) { return document.getElementById(id); }
+  var form = $("signin");
+  if (form) {
+    $("show").addEventListener("change", function () {
+      $("password").type = $("show").checked ? "text" : "password";
+    });
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      fetch("/signin", {method: "POST", headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify({password: $("password").value})})
+        .then(function (reply) {
+          if (reply.ok) { location.reload(); return null; }
+          return reply.json();
+        })
+        .then(function (answer) { if (answer) $("error").textContent = answer.error || "It failed."; })
+        .catch(function () { $("error").textContent = "No answer from the display."; });
+    });
+  }
+  var shot = $("preview");
+  if (shot) {
+    var loading = false;
+    setInterval(function () {
+      if (loading || document.hidden) return;
+      loading = true;
+      var next = new Image();
+      next.onload = function () { shot.src = next.src; loading = false; };
+      next.onerror = function () { loading = false; };
+      next.src = "/preview.jpg?t=" + Date.now();
+    }, 1200);
+  }
+})();
+</script>
+</body>
+</html>
