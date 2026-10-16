@@ -4,6 +4,10 @@ A desktop air-traffic display you can build yourself: a Raspberry Pi 5 and a 7-i
 
 > For hobby and display use only. Not for navigation, flight safety or any operational use.
 
+![FlightTrack on its stands, tracking traffic around KEQY](docs/flighttrack.jpg)
+
+*A render of the case from its model, with a screen captured from a working display. Map imagery: Esri, Maxar, Earthstar Geographics.*
+
 It shows aircraft as silhouettes of their type over a satellite map, VFR chart or street map, with rain radar, cloud, airspace and runways, at ranges from 1 to 250 NM. Tap an aircraft for its altitude, speed, route, type and photos, and its track back to takeoff; follow it, pin its track, or make it a favorite. Settings are on the touchscreen and on a password-protected web page. How it is designed is in [PLAN.md](PLAN.md).
 
 ## What you need
