@@ -1,0 +1,14 @@
+# Installed by install.sh as a systemd *user* unit; @REPO@ is replaced with the checkout path.
+# It has no [Install] section on purpose: scripts/session-start.sh starts it from the desktop
+# session's autostart, after handing systemd the session's display environment.
+
+[Unit]
+Description=FlightTrack air traffic display
+
+[Service]
+Type=simple
+WorkingDirectory=@REPO@
+Environment=PYTHONUNBUFFERED=1
+ExecStart=@REPO@/.venv/bin/python -m flighttrack --fullscreen
+Restart=on-failure
+RestartSec=3
